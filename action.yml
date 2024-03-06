@@ -1,13 +1,23 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'VulnAPI Action'
+description:
+  "GitHub Action to use CerberAuth's VulnAPI to check for vulnerabilities in
+  your API"
+author: 'CerberAuth'
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  version:
+    description: 'The version of the VulnAPI to use'
     required: true
-    default: '1000'
+    default: 'latest'
+
+  curl:
+    description: 'The curl command used to run API vulnerability scans'
+    required: false
+
+  openapi:
+    description: 'The OpenAPI file used to run API vulnerability scans'
+    required: false
 
 # Define your outputs here.
 outputs:

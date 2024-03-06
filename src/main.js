@@ -1,30 +1,35 @@
-const core = require('@actions/core')
-const { wait } = require('./wait')
+const { getInput, info, setFailed, addPath, debug } = require('@actions/core')
+const { exec } = require('@actions/exec')
 
-/**
- * The main function for the action.
- * @returns {Promise<void>} Resolves when the action is complete.
- */
+const { installVersion } = require('./installer')
+
 async function run() {
   try {
-    const ms = core.getInput('milliseconds', { required: true })
+    const version = getInput('version')
+    info(`Setup vulnapi version ${version}`)
 
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
+    const installDir = await installVersion(version)
+    info(`vulnapi has been installed to ${installDir}`)
 
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
+    addPath(installDir)
+    info('vulnapi has been added to the PATH')
 
-    // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
+    const curl = getInput('curl')
+    const openapi = getInput('openapi')
+    if (curl) {
+      const curlArg = curl.replace('curl ', '')
+
+      debug(`Running vulnapi scan with curl: ${curlArg}`)
+      await exec('vulnapi scan curl', curlArg.split(' '))
+    } else if (openapi) {
+      debug(`Running vulnapi scan with openapi: ${openapi}`)
+      await exec('vulnapi scan openapi', [openapi])
+    } else {
+      setFailed('You must provide curl or openapi input')
+    }
   } catch (error) {
-    // Fail the workflow run if an error occurs
-    core.setFailed(error.message)
+    setFailed(error.message)
   }
 }
 
-module.exports = {
-  run
-}
+module.exports = { run }
