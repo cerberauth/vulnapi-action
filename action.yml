@@ -3,6 +3,9 @@ description:
   "GitHub Action to use CerberAuth's VulnAPI to check for vulnerabilities in
   your API"
 author: 'CerberAuth'
+branding:
+  icon: 'shield'
+  color: 'purple'
 
 inputs:
   version:
