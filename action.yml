@@ -4,7 +4,6 @@ description:
   your API"
 author: 'CerberAuth'
 
-# Define your inputs here.
 inputs:
   version:
     description: 'The version of the VulnAPI to use'
@@ -18,11 +17,6 @@ inputs:
   openapi:
     description: 'The OpenAPI file used to run API vulnerability scans'
     required: false
-
-# Define your outputs here.
-outputs:
-  time:
-    description: 'Your output description here'
 
 runs:
   using: node20
