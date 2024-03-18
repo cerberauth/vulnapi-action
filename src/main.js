@@ -20,7 +20,7 @@ async function run() {
       const curlArg = curl.replace('curl ', '')
 
       debug(`Running vulnapi scan with curl: ${curlArg}`)
-      await exec('vulnapi scan curl', curlArg.split(' '))
+      await exec('vulnapi scan curl', [curlArg])
     } else if (openapi) {
       debug(`Running vulnapi scan with openapi: ${openapi}`)
       await exec('vulnapi scan openapi', [openapi])
