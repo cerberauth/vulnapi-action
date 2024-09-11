@@ -5,7 +5,7 @@ description:
 author: 'CerberAuth'
 branding:
   icon: 'shield'
-  color: 'purple'
+  color: 'gray-dark'
 
 inputs:
   version:

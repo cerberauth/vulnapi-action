@@ -42,19 +42,19 @@ jobs:
 
 ### Curl Scan Options
 
-| Name         | Required | Description               | Default |
-| ------------ | -------- | ------------------------- | ------- |
-| curl_command | true     | The curl command to scan. |         |
+| Name | Required | Description               | Default |
+| ---- | -------- | ------------------------- | ------- |
+| curl | false    | The curl command to scan. |         |
 
 ### OpenAPI Scan Options
 
-| Name        | Required | Description      | Default |
-| ----------- | -------- | ---------------- | ------- |
-| openapi_url | true     | The URL to scan. |         |
+| Name    | Required | Description                             | Default |
+| ------- | -------- | --------------------------------------- | ------- |
+| openapi | false    | The OpenAPI file location (path or URL) |         |
 
 ## Outputs
 
-No outputs.
+Scan results are output to the console.
 
 ## License
 
