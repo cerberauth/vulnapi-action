@@ -15,7 +15,7 @@ const repo = 'vulnapi'
 
 const binName = 'vulnapi'
 
-async function installVersion (version) {
+async function installVersion(version) {
   const arch = os.arch()
   if (version === 'latest') {
     info('Getting latest release')
@@ -48,7 +48,7 @@ async function installVersion (version) {
   return cachedDir
 }
 
-async function getLatestRelease () {
+async function getLatestRelease() {
   if (!process.env.GITHUB_TOKEN) {
     throw new Error('GITHUB_TOKEN is not set')
   }
@@ -61,7 +61,7 @@ async function getLatestRelease () {
   return response.data.tag_name
 }
 
-function platformParam () {
+function platformParam() {
   const platform = os.platform()
   if (platform === 'win32') {
     return 'Windows'
@@ -72,7 +72,7 @@ function platformParam () {
   }
 }
 
-function archParam (arch) {
+function archParam(arch) {
   if (arch === 'x64') {
     return 'x86_64'
   } else if (arch === 'x32') {
@@ -84,7 +84,7 @@ function archParam (arch) {
   }
 }
 
-function fileExtension () {
+function fileExtension() {
   const platform = os.platform()
   if (platform === 'win32') {
     return 'zip'
@@ -93,7 +93,7 @@ function fileExtension () {
   }
 }
 
-async function downloadVulnapi (version, arch) {
+async function downloadVulnapi(version, arch) {
   if (!process.env.GITHUB_TOKEN) {
     throw new Error('GITHUB_TOKEN is not set')
   }
@@ -132,7 +132,7 @@ async function downloadVulnapi (version, arch) {
   return downloadPath
 }
 
-async function extractArchive (archivePath) {
+async function extractArchive(archivePath) {
   const platform = os.platform()
   let extPath
 

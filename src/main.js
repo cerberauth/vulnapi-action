@@ -3,7 +3,7 @@ const { exec } = require('@actions/exec')
 
 const { installVersion } = require('./installer')
 
-async function run () {
+async function run() {
   try {
     const version = getInput('version')
     info(`Setup vulnapi version ${version}`)
