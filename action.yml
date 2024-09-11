@@ -1,7 +1,7 @@
 name: 'VulnAPI Action'
 description:
-  "GitHub Action to use CerberAuth's VulnAPI to check for vulnerabilities in
-  your API"
+  'VulnAPI is an open-source project designed to help you scan your APIs for
+  common security vulnerabilities and weaknesses.'
 author: 'CerberAuth'
 branding:
   icon: 'shield'
