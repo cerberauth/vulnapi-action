@@ -14,7 +14,6 @@ const owner = 'cerberauth'
 const repo = 'vulnapi'
 
 const binName = 'vulnapi'
-const githubRepoDownload = `'https://github.com/${owner}/${repo}/releases/download/`
 
 async function installVersion(version) {
   const arch = os.arch()
