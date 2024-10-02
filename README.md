@@ -83,7 +83,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          curl: 'curl http://localhost:8080 -H "Authorization: Bearer eyJhbGci..."'
+          curl:
+            'curl http://localhost:8080 -H "Authorization: Bearer eyJhbGci..."'
 ```
 
 ## Inputs

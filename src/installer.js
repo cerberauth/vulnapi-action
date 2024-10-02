@@ -108,6 +108,10 @@ async function downloadVulnapi(version, arch) {
     throw new Error(`Release ${version} not found`)
   }
 
+  if (!release.data?.assets || release.data.assets.length === 0) {
+    throw new Error(`No assets found for ${version}`)
+  }
+
   const { browser_download_url: downloadUrl } = release.data.assets.find(
     asset =>
       asset.name.includes(platformParam()) &&
