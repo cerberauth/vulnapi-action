@@ -34,8 +34,10 @@ All the vulnerabilities detected by the project are listed at this URL:
 
 ## Example usage
 
+### Using OpenAPI
+
 ```yaml
-name: VulnAPI
+name: Scan for API vulnerabilities
 
 on: [push]
 
@@ -55,8 +57,33 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          curl:
-            'curl http://localhost:8080 -H "Authorization: Bearer eyJhbGci..."'
+          openapi: 'openapi.yaml'
+```
+
+### Using Curl
+
+```yaml
+name: Scan for API vulnerabilities
+
+on: [push]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: VulnAPI
+        uses: cerberauth/vulnapi-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          curl: 'curl http://localhost:8080 -H "Authorization: Bearer eyJhbGci..."'
 ```
 
 ## Inputs
