@@ -1,7 +1,23 @@
 const { getInput, info, setFailed, addPath, debug } = require('@actions/core')
 const { exec } = require('@actions/exec')
+const parseArgs = require('yargs-parser')
 
 const { installVersion } = require('./installer')
+
+function getArgsFromInput(input) {
+  const inputArgs = parseArgs(input)
+  return Object.entries(inputArgs).flatMap(([key, value]) => {
+    if (key === '_') {
+      return value
+    }
+
+    if (key.length === 1) {
+      return `-${key} ${value}`
+    }
+
+    return `--${key}=${value}`
+  })
+}
 
 async function run() {
   try {
@@ -17,10 +33,11 @@ async function run() {
     const curl = getInput('curl')
     const openapi = getInput('openapi')
     if (curl) {
-      const curlArg = curl.replace('curl ', '')
+      debug(`Parsing curl input: ${curl}`)
+      const args = getArgsFromInput(curl.replace('curl ', ''))
 
-      debug(`Running vulnapi scan with curl: ${curlArg}`)
-      await exec('vulnapi scan curl', [curlArg])
+      debug(`Running vulnapi scan with curl: ${JSON.stringify(args)}`)
+      await exec('vulnapi scan curl', args)
     } else if (openapi) {
       debug(`Running vulnapi scan with openapi: ${openapi}`)
       await exec('vulnapi scan openapi', [openapi])

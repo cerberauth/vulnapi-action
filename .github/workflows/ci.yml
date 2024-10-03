@@ -52,6 +52,9 @@ jobs:
       contents: read
       packages: read
 
+    env:
+      DOCKER_IMAGE: ghcr.io/cerberauth/api-vulns-challenges/jwt-strong-eddsa-key:latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,16 +67,31 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Server
-        run: docker run -d -p 8080:8080 ghcr.io/cerberauth/api-vulns-challenges/jwt-strong-eddsa-key:latest
-  
+        run: |
+          docker run -d -p 8080:8080 ${{ env.DOCKER_IMAGE }}
+          sleep 5
+
       - name: Get JWT
         id: get-jwt
-        run: echo "jwt=$(docker run --rm ghcr.io/cerberauth/api-vulns-challenges/jwt-strong-eddsa-key:latest jwt) >> $GITHUB_OUTPUT
+        run: |
+          echo "jwt=$(docker run --rm ${{ env.DOCKER_IMAGE }} jwt)" >> $GITHUB_OUTPUT
 
       - name: Test CURL Local Action
-        id: test-curl-action
         uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          curl: 'curl http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}" --scans "jwt.*"'
+          curl: |
+            curl http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}" --scans "jwt.*"
+
+      # - name: Test OpenAPI Local Action
+      #   uses: ./
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     openapi: ./__tests__/openapi.yaml
+
+      - name: Stop Server
+        if: ${{ always() }}
+        run:
+          docker stop $(docker ps -q --filter ancestor=${{ env.DOCKER_IMAGE }})
