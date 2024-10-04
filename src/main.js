@@ -19,6 +19,37 @@ function getArgsFromInput(input) {
   })
 }
 
+function getCommonArgs() {
+  const commonArgs = []
+
+  const rateLimit = getInput('rateLimit')
+  if (rateLimit) {
+    commonArgs.push(`--rate-limit=${rateLimit}`)
+  }
+
+  const scans = getInput('scans')
+  if (scans) {
+    commonArgs.push(`--scans=${scans}`)
+  }
+
+  const excludeScans = getInput('excludeScans')
+  if (excludeScans) {
+    commonArgs.push(`--exclude-scans=${excludeScans}`)
+  }
+
+  const proxy = getInput('proxy')
+  if (proxy) {
+    commonArgs.push(`--proxy=${proxy}`)
+  }
+
+  const severityThreshold = getInput('severityThreshold')
+  if (severityThreshold) {
+    commonArgs.push(`--severity-threshold=${severityThreshold}`)
+  }
+
+  return commonArgs
+}
+
 async function run() {
   try {
     const version = getInput('version')
@@ -30,6 +61,8 @@ async function run() {
     addPath(installDir)
     info('vulnapi has been added to the PATH')
 
+    const commonArgs = getCommonArgs()
+
     const curl = getInput('curl')
     const openapi = getInput('openapi')
     if (curl) {
@@ -37,10 +70,10 @@ async function run() {
       const args = getArgsFromInput(curl.replace('curl ', ''))
 
       debug(`Running vulnapi scan with curl: ${JSON.stringify(args)}`)
-      await exec('vulnapi scan curl', args)
+      await exec('vulnapi scan curl', [...args, ...commonArgs])
     } else if (openapi) {
       debug(`Running vulnapi scan with openapi: ${openapi}`)
-      await exec('vulnapi scan openapi', [openapi])
+      await exec('vulnapi scan openapi', [openapi, ...commonArgs])
     } else {
       setFailed('You must provide curl or openapi input')
     }
