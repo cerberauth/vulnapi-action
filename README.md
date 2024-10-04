@@ -107,6 +107,16 @@ jobs:
 | ------- | -------- | --------------------------------------- | ------- |
 | openapi | false    | The OpenAPI file location (path or URL) |         |
 
+### VulnAPI Supported Flags
+
+| Name              | Required | Description                                         | Default |
+| ----------------- | -------- | --------------------------------------------------- | ------- |
+| scans             | false    | The scans performed.                                | all     |
+| excludeScans      | false    | The scans to exclude.                               |         |
+| rateLimit         | false    | The rate limit used to run API vulnerability scans. | 10/s    |
+| proxy             | false    | The proxy server used during the scan.              |         |
+| severityThreshold | false    | The severity threshold to trigger a failure.        | 0       |
+
 ## Outputs
 
 Scan results are output to the console.
