@@ -139,7 +139,17 @@ jobs:
           sleep 5
           curl --verbose http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}"
 
-      - name: Test CURL Local Action
+      - name: Test CURL Local Action with rate limit and excluded scans
+        uses: ./
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          rateLimit: 1000/s
+          excludeScans: discover.*
+          curl: |
+            curl http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}"
+
+      - name: Test CURL Local Action with selected scans
         uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
