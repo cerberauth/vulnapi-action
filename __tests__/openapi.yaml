@@ -1,0 +1,27 @@
+openapi: 3.1.0
+
+info:
+  title: Fake API
+  description: A fake API for testing purposes
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /example:
+    get:
+      summary: Retrieve an example resource
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                components:
+                  securitySchemes:
+                    bearerAuth:
+                      type: http
+                      scheme: bearer
+                      bearerFormat: JWT
+                security:
+                  - bearerAuth: []
