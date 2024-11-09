@@ -32500,6 +32500,11 @@ function getCommonArgs() {
     commonArgs.push(`--rate-limit=${rateLimit}`)
   }
 
+  const telemetry = getInput('telemetry')
+  if (telemetry && (telemetry === 'false' || telemetry === '0')) {
+    commonArgs.push('--sqa-opt-out')
+  }
+
   const scans = getInput('scans')
   if (scans) {
     commonArgs.push(`--scans=${scans}`)

@@ -76,7 +76,7 @@ jobs:
         run: |
           echo "jwt=$(docker run --rm ${{ env.DOCKER_IMAGE }} jwt)" >> $GITHUB_OUTPUT
 
-      - name: Test CURL Local Action
+      - name: Test cURL Local Action
         uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -85,6 +85,16 @@ jobs:
           curl: |
             curl http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}"
 
+      - name: Test cURL Local Action without Telemetry
+        uses: ./
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scans: jwt.*
+          curl: |
+            curl http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}"
+          telemetry: false
+
       # - name: Test OpenAPI Local Action
       #   uses: ./
       #   env:
@@ -92,6 +102,7 @@ jobs:
       #   with:
       #     scans: jwt.*
       #     openapi: ./__tests__/openapi.yaml
+      #     telemetry: false
 
       - name: Stop Server
         if: ${{ always() }}
