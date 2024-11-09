@@ -34,6 +34,13 @@ inputs:
     required: false
     default: 10/s
 
+  telemetry:
+    description:
+      'VulnAPI uses fully anonymized telemetry data to help improve the tool.
+      You can disable it by setting this to false.'
+    required: false
+    default: 'true'
+
   proxy:
     description: 'The proxy server used during the scan'
     required: false

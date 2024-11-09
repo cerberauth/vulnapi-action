@@ -111,11 +111,11 @@ jobs:
 
 | Name              | Required | Description                                         | Default |
 | ----------------- | -------- | --------------------------------------------------- | ------- |
-| scans             | false    | The scans performed.                                | all     |
+| scans             | false    | The scans performed.                                | `all`   |
 | excludeScans      | false    | The scans to exclude.                               |         |
-| rateLimit         | false    | The rate limit used to run API vulnerability scans. | 10/s    |
+| rateLimit         | false    | The rate limit used to run API vulnerability scans. | `10/s`  |
 | proxy             | false    | The proxy server used during the scan.              |         |
-| severityThreshold | false    | The severity threshold to trigger a failure.        | 0       |
+| severityThreshold | false    | The severity threshold to trigger a failure.        | `0`     |
 
 ## Outputs
 
@@ -123,9 +123,15 @@ Scan results are output to the console.
 
 ## Disclaimer
 
-This scanner is provided for educational and informational purposes only. It
-should not be used for malicious purposes or to attack any system without proper
-authorization. Always respect the security and privacy of others.
+This scanner is provided for informational purposes only. It should not be used
+for malicious purposes or to attack any system without proper authorization.
+Always respect the security and privacy of others.
+
+## Telemetry
+
+VulnAPI collects fully anonymized usage data to help improve the tool. This data
+is not shared with third parties. You can opt-out of telemetry by setting the
+`telemetry` option to `false`.
 
 ## License
 
