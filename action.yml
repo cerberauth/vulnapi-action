@@ -32,7 +32,6 @@ inputs:
   rateLimit:
     description: 'The rate limit used to run API vulnerability scans'
     required: false
-    default: 10/s
 
   telemetry:
     description:
