@@ -1,25 +1,25 @@
-const { debug, info } = require('@actions/core')
-const { getOctokit } = require('@actions/github')
-const {
+import { debug, info } from '@actions/core'
+import { getOctokit } from '@actions/github'
+import {
   cacheDir,
   downloadTool,
   extractTar,
   extractZip,
-  find: findTool,
-  findAllVersions: findAllToolVersions
-} = require('@actions/tool-cache')
-const os = require('os')
+  find as findTool,
+  findAllVersions as findAllToolVersions
+} from '@actions/tool-cache'
+import os from 'os'
 
 const owner = 'cerberauth'
 const repo = 'vulnapi'
 
 const binName = 'vulnapi'
 
-async function installVersion(version) {
+export async function installVersion(version: string) {
   const arch = os.arch()
   if (version === 'latest') {
     info('Getting latest release')
-    version = await getLatestRelease(owner, repo)
+    version = await getLatestRelease()
     info(`Latest release is ${version}`)
   }
 
@@ -72,7 +72,7 @@ function platformParam() {
   }
 }
 
-function archParam(arch) {
+function archParam(arch: string) {
   if (arch === 'x64') {
     return 'x86_64'
   } else if (arch === 'x32') {
@@ -84,16 +84,7 @@ function archParam(arch) {
   }
 }
 
-function fileExtension() {
-  const platform = os.platform()
-  if (platform === 'win32') {
-    return 'zip'
-  } else {
-    return 'tar.gz'
-  }
-}
-
-async function downloadVulnapi(version, arch) {
+async function downloadVulnapi(version: string, arch: string) {
   if (!process.env.GITHUB_TOKEN) {
     throw new Error('GITHUB_TOKEN is not set')
   }
@@ -112,31 +103,28 @@ async function downloadVulnapi(version, arch) {
     throw new Error(`No assets found for ${version}`)
   }
 
-  const { browser_download_url: downloadUrl } = release.data.assets.find(
-    asset =>
+  const asset = release.data.assets.find(
+    (asset) =>
       asset.name.includes(platformParam()) &&
       asset.name.includes(archParam(arch))
   )
+  if (!asset) {
+    throw new Error(`No asset found for ${platformParam()} ${archParam(arch)}`)
+  }
+
+  const downloadUrl = asset.browser_download_url
   if (!downloadUrl) {
     throw new Error(
       `No download found for ${platformParam()} ${archParam(arch)}`
     )
   }
 
-  // if (platform === 'win32') {
-  //   downloadUrl = octokit.rest.repos.downloadZipballArchive({ owner,  })
-  // } else {
-  //   downloadUrl = octokit.rest.repos.downloadTarballArchive({ owner, repo, ref: version })
-  // }
-
-  // const ext = fileExtension()
-  // const url = `${githubRepoDownload}${version}/vulnapi_${platformParam()}_${archParam(arch)}.${ext}`
   info(`Downloading from ${downloadUrl}`)
   const downloadPath = await downloadTool(downloadUrl)
   return downloadPath
 }
 
-async function extractArchive(archivePath) {
+async function extractArchive(archivePath: string) {
   const platform = os.platform()
   let extPath
 
@@ -148,5 +136,3 @@ async function extractArchive(archivePath) {
 
   return extPath
 }
-
-module.exports = { installVersion }

@@ -1,10 +1,10 @@
-const { getInput, info, setFailed, addPath, debug } = require('@actions/core')
-const { exec } = require('@actions/exec')
-const parseArgs = require('yargs-parser')
+import { getInput, info, setFailed, addPath, debug } from '@actions/core'
+import { exec } from '@actions/exec'
+import parseArgs from 'yargs-parser'
 
-const { installVersion } = require('./installer')
+import { installVersion } from './installer.js'
 
-function getArgsFromInput(input) {
+function getArgsFromInput(input: string) {
   const inputArgs = parseArgs(input)
   return Object.entries(inputArgs).flatMap(([key, value]) => {
     if (key === '_') {
@@ -55,7 +55,7 @@ function getCommonArgs() {
   return commonArgs
 }
 
-async function run() {
+export async function run() {
   try {
     const version = getInput('version')
     info(`Setup vulnapi version ${version}`)
@@ -83,8 +83,10 @@ async function run() {
       setFailed('You must provide curl or openapi input')
     }
   } catch (error) {
-    setFailed(error.message)
+    if (error instanceof Error) {
+      return setFailed(error.message)
+    }
+
+    setFailed('An unknown error occurred')
   }
 }
-
-module.exports = { run }
