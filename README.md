@@ -50,7 +50,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: VulnAPI
         uses: cerberauth/vulnapi-action@v1
@@ -60,7 +60,7 @@ jobs:
           openapi: 'openapi.yaml'
 ```
 
-### Using Curl
+### Using cURL
 
 ```yaml
 name: Scan for API vulnerabilities
@@ -76,7 +76,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: VulnAPI
         uses: cerberauth/vulnapi-action@v1
@@ -95,11 +95,11 @@ jobs:
 | ------- | -------- | -------------------------------- | ------- |
 | version | false    | The version of the file to scan. | latest  |
 
-### Curl Scan Options
+### cURL Scan Options
 
 | Name | Required | Description               | Default |
 | ---- | -------- | ------------------------- | ------- |
-| curl | false    | The curl command to scan. |         |
+| curl | false    | The cURL command to scan. |         |
 
 ### OpenAPI Scan Options
 

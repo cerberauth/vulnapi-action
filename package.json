@@ -2,7 +2,8 @@
   "name": "vulnapi-action",
   "description": "GitHub Action to use CerberAuth's VulnAPI to check for vulnerabilities in your API",
   "version": "0.0.0",
-  "author": "",
+  "author": "CerberAuth <github-support@cerberauth.com>",
+  "type": "module",
   "private": true,
   "homepage": "https://github.com/cerberauth/vulnapi-action#readme",
   "repository": {
@@ -23,68 +24,58 @@
     ".": "./dist/index.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "bundle": "npm run format:write && npm run package",
-    "ci-test": "npx jest",
+    "ci-test": "NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 npx jest",
     "coverage": "npx make-coverage-badge --output-path ./badges/coverage.svg",
     "format:write": "npx prettier --write .",
     "format:check": "npx prettier --check .",
-    "lint": "npx eslint . -c ./.github/linters/.eslintrc.yml",
-    "package": "npx ncc build src/index.js -o dist --source-map --license licenses.txt",
+    "lint": "npx eslint .",
+    "local-action": "npx @github/local-action . src/main.ts .env",
+    "package": "npx rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript",
     "package:watch": "npm run package -- --watch",
-    "test": "npx jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 npx jest",
     "all": "npm run format:write && npm run lint && npm run test && npm run coverage && npm run package"
   },
   "license": "MIT",
-  "eslintConfig": {
-    "extends": "./.github/linters/.eslintrc.yml"
-  },
-  "jest": {
-    "verbose": true,
-    "clearMocks": true,
-    "testEnvironment": "node",
-    "moduleFileExtensions": [
-      "js"
-    ],
-    "testMatch": [
-      "**/*.test.js"
-    ],
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/dist/"
-    ],
-    "coverageReporters": [
-      "json-summary",
-      "text",
-      "lcov"
-    ],
-    "collectCoverage": true,
-    "collectCoverageFrom": [
-      "./src/**"
-    ]
-  },
   "dependencies": {
     "@actions/core": "1.11.1",
     "@actions/exec": "1.1.1",
-    "@actions/github": "6.0.0",
+    "@actions/github": "6.0.1",
     "@actions/tool-cache": "2.0.2",
-    "node-fetch": "3.3.2",
-    "yargs-parser": "21.1.1"
+    "yargs-parser": "22.0.0"
   },
   "devDependencies": {
-    "@babel/core": "7.26.9",
-    "@babel/eslint-parser": "7.26.8",
-    "@babel/preset-env": "7.26.9",
-    "@vercel/ncc": "0.38.3",
-    "babel-preset-jest": "29.6.3",
-    "eslint": "8.57.1",
-    "eslint-plugin-github": "5.1.8",
-    "eslint-plugin-jest": "28.11.0",
-    "jest": "29.7.0",
+    "@eslint/compat": "1.4.0",
+    "@github/local-action": "6.0.2",
+    "@jest/globals": "30.2.0",
+    "@octokit/core": "7.0.6",
+    "@rollup/plugin-commonjs": "28.0.8",
+    "@rollup/plugin-json": "6.1.0",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "@rollup/plugin-typescript": "12.3.0",
+    "@types/jest": "30.0.0",
+    "@types/node": "24.10.1",
+    "@typescript-eslint/eslint-plugin": "8.46.1",
+    "@typescript-eslint/parser": "8.46.1",
+    "eslint": "9.39.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-import-resolver-typescript": "4.4.4",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-jest": "29.0.1",
+    "eslint-plugin-prettier": "5.5.4",
+    "jest": "30.2.0",
     "make-coverage-badge": "1.2.0",
-    "prettier": "3.5.1",
-    "typescript": "5.7.3"
+    "prettier": "3.6.2",
+    "prettier-eslint": "16.4.2",
+    "rollup": "4.53.2",
+    "ts-jest": "29.4.5",
+    "ts-jest-resolver": "2.0.1",
+    "typescript": "5.9.3"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "*"
   }
 }
