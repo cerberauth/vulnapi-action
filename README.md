@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: VulnAPI
-        uses: cerberauth/vulnapi-action@v1
+        uses: cerberauth/vulnapi-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -79,7 +79,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: VulnAPI
-        uses: cerberauth/vulnapi-action@v1
+        uses: cerberauth/vulnapi-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
