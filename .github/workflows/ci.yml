@@ -12,14 +12,14 @@ permissions:
   contents: read
 
 jobs:
-  test-javascript:
-    name: JavaScript Tests
+  test-typescript:
+    name: TypeScript Tests
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         id: setup-node
@@ -57,7 +57,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -74,7 +74,7 @@ jobs:
       - name: Get JWT
         id: get-jwt
         run: |
-          echo "jwt=$(docker run --rm ${{ env.DOCKER_IMAGE }} jwt)" >> $GITHUB_OUTPUT
+          echo "jwt=$(docker run --rm ${{ env.DOCKER_IMAGE }} jwt)" >> "$GITHUB_OUTPUT"
 
       - name: Test cURL Local Action
         uses: ./
@@ -107,4 +107,5 @@ jobs:
       - name: Stop Server
         if: ${{ always() }}
         run:
-          docker stop $(docker ps -q --filter ancestor=${{ env.DOCKER_IMAGE }})
+          docker stop "$(docker ps -q --filter ancestor=${{ env.DOCKER_IMAGE
+          }})"
