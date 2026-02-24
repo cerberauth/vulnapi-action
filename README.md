@@ -1,6 +1,10 @@
+<!-- markdownlint-disable MD033 MD041 MD013 -->
+<!-- textlint-disable -->
 <p align="center">
     <img src="https://vulnapi.cerberauth.com/logo-ascii-text-art.png" height="150" alt="vulnapi logo">
 </p>
+<!-- textlint-enable -->
+<!-- markdownlint-enable MD033 MD041 MD013 -->
 
 ---
 
@@ -83,8 +87,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          curl:
-            'curl http://localhost:8080 -H "Authorization: Bearer eyJhbGci..."'
+          curl: 'curl http://localhost:8080 -H "Authorization: Bearer
+            eyJhbGci..."' # gitleaks:allow
 ```
 
 ## Inputs
@@ -97,15 +101,25 @@ jobs:
 
 ### cURL Scan Options
 
-| Name | Required | Description               | Default |
-| ---- | -------- | ------------------------- | ------- |
-| curl | false    | The cURL command to scan. |         |
+| Name | Required | Description | Default |
+| ---- | -------- | ----------- | ------- |
+
+<!-- textlint-disable terminology -->
+
+| curl | false | The cURL command to scan. | |
+
+<!-- textlint-enable terminology -->
 
 ### OpenAPI Scan Options
 
-| Name    | Required | Description                             | Default |
-| ------- | -------- | --------------------------------------- | ------- |
-| openapi | false    | The OpenAPI file location (path or URL) |         |
+| Name | Required | Description | Default |
+| ---- | -------- | ----------- | ------- |
+
+<!-- textlint-disable terminology -->
+
+| openapi | false | The OpenAPI file location (path or URL) | |
+
+<!-- textlint-enable terminology -->
 
 ### VulnAPI Supported Flags
 
