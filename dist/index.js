@@ -39081,12 +39081,13 @@ async function extractArchive(archivePath) {
 
 function getArgsFromInput(input) {
     const inputArgs = yargsParser(input);
+    debug(`Parsed input args: ${JSON.stringify(inputArgs)}`);
     return Object.entries(inputArgs).flatMap(([key, value]) => {
         if (key === '_') {
             return value;
         }
         if (key.length === 1) {
-            return `-${key} ${value}`;
+            return [`-${key}`, String(value)];
         }
         return `--${key}=${value}`;
     });
@@ -39128,17 +39129,20 @@ async function run() {
         addPath(installDir);
         info('vulnapi has been added to the PATH');
         const commonArgs = getCommonArgs();
+        const execOptions = {
+            failOnStdErr: true
+        };
         const curl = getInput('curl');
         const openapi = getInput('openapi');
         if (curl) {
             debug(`Parsing curl input: ${curl}`);
             const args = getArgsFromInput(curl.replace('curl ', ''));
             debug(`Running vulnapi scan with curl: ${JSON.stringify(args)}`);
-            await exec('vulnapi scan curl', [...args, ...commonArgs]);
+            await exec('vulnapi', ['scan', 'curl', ...args, ...commonArgs, '--no-progress'], execOptions);
         }
         else if (openapi) {
             debug(`Running vulnapi scan with openapi: ${openapi}`);
-            await exec('vulnapi scan openapi', [openapi, ...commonArgs]);
+            await exec('vulnapi', ['scan', 'openapi', openapi, ...commonArgs, '--no-progress'], execOptions);
         }
         else {
             setFailed('You must provide curl or openapi input');

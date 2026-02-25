@@ -1,18 +1,19 @@
 import { getInput, info, setFailed, addPath, debug } from '@actions/core'
-import { exec } from '@actions/exec'
+import { exec, ExecOptions } from '@actions/exec'
 import parseArgs from 'yargs-parser'
 
 import { installVersion } from './installer.js'
 
 function getArgsFromInput(input: string) {
   const inputArgs = parseArgs(input)
+  debug(`Parsed input args: ${JSON.stringify(inputArgs)}`)
   return Object.entries(inputArgs).flatMap(([key, value]) => {
     if (key === '_') {
       return value
     }
 
     if (key.length === 1) {
-      return `-${key} ${value}`
+      return [`-${key}`, String(value)]
     }
 
     return `--${key}=${value}`
@@ -68,6 +69,10 @@ export async function run() {
 
     const commonArgs = getCommonArgs()
 
+    const execOptions: ExecOptions = {
+      failOnStdErr: true
+    }
+
     const curl = getInput('curl')
     const openapi = getInput('openapi')
     if (curl) {
@@ -75,10 +80,18 @@ export async function run() {
       const args = getArgsFromInput(curl.replace('curl ', ''))
 
       debug(`Running vulnapi scan with curl: ${JSON.stringify(args)}`)
-      await exec('vulnapi scan curl', [...args, ...commonArgs])
+      await exec(
+        'vulnapi',
+        ['scan', 'curl', ...args, ...commonArgs, '--no-progress'],
+        execOptions
+      )
     } else if (openapi) {
       debug(`Running vulnapi scan with openapi: ${openapi}`)
-      await exec('vulnapi scan openapi', [openapi, ...commonArgs])
+      await exec(
+        'vulnapi',
+        ['scan', 'openapi', openapi, ...commonArgs, '--no-progress'],
+        execOptions
+      )
     } else {
       setFailed('You must provide curl or openapi input')
     }
