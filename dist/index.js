@@ -39048,9 +39048,6 @@ async function downloadVulnapi(version, arch) {
         repo,
         tag: version
     });
-    if (!release) {
-        throw new Error(`Release ${version} not found`);
-    }
     if (!release.data?.assets || release.data.assets.length === 0) {
         throw new Error(`No assets found for ${version}`);
     }
@@ -39086,10 +39083,11 @@ function getArgsFromInput(input) {
         if (key === '_') {
             return value;
         }
+        const values = Array.isArray(value) ? value : [value];
         if (key.length === 1) {
-            return [`-${key}`, String(value)];
+            return values.flatMap((v) => [`-${key}`, String(v)]);
         }
-        return `--${key}=${value}`;
+        return values.map((v) => `--${key}=${v}`);
     });
 }
 function getCommonArgs() {
@@ -39136,7 +39134,7 @@ async function run() {
         const openapi = getInput('openapi');
         if (curl) {
             debug(`Parsing curl input: ${curl}`);
-            const args = getArgsFromInput(curl.replace('curl ', ''));
+            const args = getArgsFromInput(curl.replace(/^curl\s+/, ''));
             debug(`Running vulnapi scan with curl: ${JSON.stringify(args)}`);
             await exec('vulnapi', ['scan', 'curl', ...args, ...commonArgs, '--no-progress'], execOptions);
         }

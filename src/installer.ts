@@ -95,9 +95,6 @@ async function downloadVulnapi(version: string, arch: string) {
     repo,
     tag: version
   })
-  if (!release) {
-    throw new Error(`Release ${version} not found`)
-  }
 
   if (!release.data?.assets || release.data.assets.length === 0) {
     throw new Error(`No assets found for ${version}`)

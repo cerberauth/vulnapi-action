@@ -9,14 +9,16 @@ function getArgsFromInput(input: string) {
   debug(`Parsed input args: ${JSON.stringify(inputArgs)}`)
   return Object.entries(inputArgs).flatMap(([key, value]) => {
     if (key === '_') {
-      return value
+      return value as string[]
     }
+
+    const values = Array.isArray(value) ? value : [value]
 
     if (key.length === 1) {
-      return [`-${key}`, String(value)]
+      return values.flatMap((v) => [`-${key}`, String(v)])
     }
 
-    return `--${key}=${value}`
+    return values.map((v) => `--${key}=${v}`)
   })
 }
 
@@ -77,7 +79,7 @@ export async function run() {
     const openapi = getInput('openapi')
     if (curl) {
       debug(`Parsing curl input: ${curl}`)
-      const args = getArgsFromInput(curl.replace('curl ', ''))
+      const args = getArgsFromInput(curl.replace(/^curl\s+/, ''))
 
       debug(`Running vulnapi scan with curl: ${JSON.stringify(args)}`)
       await exec(
