@@ -1,4 +1,4 @@
-import { debug, info } from '@actions/core'
+import { debug, getInput, info } from '@actions/core'
 import { getOctokit } from '@actions/github'
 import {
   cacheDir,
@@ -48,12 +48,18 @@ export async function installVersion(version: string) {
   return cachedDir
 }
 
-async function getLatestRelease() {
-  if (!process.env.GITHUB_TOKEN) {
-    throw new Error('GITHUB_TOKEN is not set')
+function getToken(): string {
+  const token = getInput('token') || process.env.GITHUB_TOKEN
+  if (!token) {
+    throw new Error(
+      'GitHub token is not set. Provide the token input or set GITHUB_TOKEN.'
+    )
   }
+  return token
+}
 
-  const octokit = getOctokit(process.env.GITHUB_TOKEN)
+async function getLatestRelease() {
+  const octokit = getOctokit(getToken())
   const response = await octokit.rest.repos.getLatestRelease({
     owner,
     repo
@@ -85,11 +91,7 @@ function archParam(arch: string) {
 }
 
 async function downloadVulnapi(version: string, arch: string) {
-  if (!process.env.GITHUB_TOKEN) {
-    throw new Error('GITHUB_TOKEN is not set')
-  }
-
-  const octokit = getOctokit(process.env.GITHUB_TOKEN)
+  const octokit = getOctokit(getToken())
   const release = await octokit.rest.repos.getReleaseByTag({
     owner,
     repo,
