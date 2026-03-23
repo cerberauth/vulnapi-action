@@ -58,8 +58,6 @@ jobs:
 
       - name: VulnAPI
         uses: cerberauth/vulnapi-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           openapi: 'openapi.yaml'
 ```
@@ -84,8 +82,6 @@ jobs:
 
       - name: VulnAPI
         uses: cerberauth/vulnapi-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           curl: 'curl http://localhost:8080 -H "Authorization: Bearer
             eyJhbGci..."' # gitleaks:allow

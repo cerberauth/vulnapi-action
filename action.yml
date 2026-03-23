@@ -8,6 +8,11 @@ branding:
   color: 'gray-dark'
 
 inputs:
+  token:
+    description: 'GitHub token used to authenticate with the GitHub API'
+    required: false
+    default: ${{ github.token }}
+
   version:
     description: 'The version of the VulnAPI to use'
     required: true

@@ -17,32 +17,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        id: setup-node
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: Install Dependencies
-        id: npm-ci
-        run: npm ci
-
-      - name: Check Format
-        id: npm-format-check
-        run: npm run format:check
-
-      - name: Lint
-        id: npm-lint
-        run: npm run lint
-
-      - name: Test
-        id: npm-ci-test
-        run: npm run ci-test
+      - name: Build and Test
+        uses: cerberauth/ci/actions/node-build-test@main
 
   test-failed-scans:
     name: GitHub Actions Test Failed Scans
@@ -81,8 +57,6 @@ jobs:
         id: test-curl-action
         continue-on-error: true
         uses: ./
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           scans: jwt.*
           curl: |
@@ -143,8 +117,6 @@ jobs:
 
       - name: Test cURL Local Action with rate limit and excluded scans
         uses: ./
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           rateLimit: 1000/s
           excludeScans: misconfiguration.*
@@ -153,8 +125,6 @@ jobs:
 
       - name: Test cURL Local Action with selected scans
         uses: ./
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           scans: jwt.*
           curl: |
@@ -162,8 +132,6 @@ jobs:
 
       - name: Test cURL Local Action without Telemetry
         uses: ./
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           scans: jwt.*
           curl: |
