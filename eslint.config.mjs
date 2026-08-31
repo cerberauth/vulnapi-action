@@ -31,6 +31,7 @@ export default [
       prettier,
       '@typescript-eslint': typescriptEslint
     },
+
     languageOptions: {
       globals: {
         ...globals.node,
@@ -38,9 +39,11 @@ export default [
         Atomics: 'readonly',
         SharedArrayBuffer: 'readonly'
       },
+
       parser: tsParser,
       ecmaVersion: 2023,
       sourceType: 'module',
+
       parserOptions: {
         projectService: {
           allowDefaultProject: [
@@ -54,6 +57,7 @@ export default [
         tsconfigRootDir: import.meta.dirname
       }
     },
+
     settings: {
       'import/resolver': {
         typescript: {
@@ -62,6 +66,7 @@ export default [
         }
       }
     },
+
     rules: {
       camelcase: 'off',
       'eslint-comments/no-use': 'off',

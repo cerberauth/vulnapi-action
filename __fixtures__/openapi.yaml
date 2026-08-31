@@ -6,10 +6,20 @@ info:
   version: 1.0.0
 servers:
   - url: http://localhost:8080
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []
 paths:
   /example:
     get:
       summary: Retrieve an example resource
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Successful response
@@ -17,11 +27,3 @@ paths:
             application/json:
               schema:
                 type: object
-                components:
-                  securitySchemes:
-                    bearerAuth:
-                      type: http
-                      scheme: bearer
-                      bearerFormat: JWT
-                security:
-                  - bearerAuth: []
