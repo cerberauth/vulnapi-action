@@ -1,0 +1,15 @@
+---
+exit-code: 1
+exit-on-eol: 2
+scan:
+  disable-telemetry: true
+  scanners:
+    - vuln
+    - misconfig
+    - secret
+  # The bundled action code in dist/ vendors third-party dependencies
+  # (e.g. @actions/cache -> @azure/storage-blob) that embed the well-known
+  # Azurite development storage account key. Trivy flags it as a leaked
+  # Azure Storage Account Key, but it is a public constant, not a secret.
+  skip-dirs:
+    - dist
