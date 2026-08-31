@@ -10,11 +10,12 @@ on:
   schedule:
     - cron: '31 7 * * 3'
 
-permissions: read-all
+permissions:
+  actions: read
+  contents: read
+  packages: read
+  security-events: write
 
 jobs:
   analyze:
     uses: cerberauth/ci/.github/workflows/typescript-codeql.yml@main
-    with:
-      config-file: .github/codeql/codeql-config.yml
-      source-root: src

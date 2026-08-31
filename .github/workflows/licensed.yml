@@ -3,7 +3,8 @@ name: Licensed
 on:
   workflow_dispatch: {}
 
-permissions: read-all
+permissions:
+  contents: write
 
 jobs:
   licensed:

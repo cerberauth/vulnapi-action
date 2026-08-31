@@ -7,7 +7,7 @@
       "request": "launch",
       "runtimeExecutable": "npx",
       "cwd": "${workspaceRoot}",
-      "args": ["@github/local-action", ".", "src/main.js", ".env"],
+      "args": ["@github/local-action", ".", "src/main.ts", ".env"],
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**", "node_modules/**"]
     }
