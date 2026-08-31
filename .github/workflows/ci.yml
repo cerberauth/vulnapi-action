@@ -14,11 +14,7 @@ permissions:
 jobs:
   test-typescript:
     name: TypeScript Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Build and Test
-        uses: cerberauth/ci/actions/node-build-test@main
+    uses: cerberauth/ci/.github/workflows/action-ci.yml@main
 
   test-failed-scans:
     name: GitHub Actions Test Failed Scans

@@ -1,9 +1,3 @@
----
-mode: agent
-tools: ['changes', 'codebase', 'github']
-description: Generate release notes for updates to the repository.
----
-
 # Create Release Notes
 
 You are an expert technical writer tasked with creating release notes for

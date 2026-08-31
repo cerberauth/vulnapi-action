@@ -1,9 +1,3 @@
----
-mode: agent
-tools: ['codebase', 'github']
-description: Generate unit tests for one or more files in the repository.
----
-
 # Create Unit Test(s)
 
 You are an expert software engineer tasked with creating unit tests for the
@@ -28,9 +22,9 @@ Ensure you adhere to the following guidelines when creating unit tests:
 
 Use the following as an example of how to structure your unit tests:
 
-```javascript
+```typescript
 /**
- * Unit tests for the action's main functionality, src/main.js
+ * Unit tests for the action's main functionality, src/main.ts
  */
 import { jest } from '@jest/globals'
 import * as core from '../__fixtures__/core.js'
@@ -44,7 +38,7 @@ jest.unstable_mockModule('../src/wait.js', () => ({ wait }))
 // mocks are used in place of any actual dependencies.
 const { run } = await import('../src/main.js')
 
-describe('main.js', () => {
+describe('main.ts', () => {
   beforeEach(() => {
     // Set the action's inputs as return values from core.getInput().
     core.getInput.mockImplementation(() => '500')
