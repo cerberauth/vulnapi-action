@@ -22,12 +22,43 @@ function getArgsFromInput(input: string) {
   })
 }
 
-function getCommonArgs() {
+function isVersionAtLeast(version: string, target: string): boolean {
+  const parse = (v: string) =>
+    v
+      .replace(/^v/, '')
+      .split(/[.+-]/)
+      .slice(0, 3)
+      .map((n) => parseInt(n, 10))
+
+  const current = parse(version)
+  if (current.some((n) => Number.isNaN(n))) {
+    return true
+  }
+
+  const wanted = parse(target)
+  for (let i = 0; i < 3; i++) {
+    const a = current[i] ?? 0
+    const b = wanted[i] ?? 0
+    if (a !== b) {
+      return a > b
+    }
+  }
+  return true
+}
+
+function getCommonArgs(version: string) {
   const commonArgs = []
+
+  // vulnapi renamed the `--rate-limit` flag to `--rate` starting with 0.9.0, and
+  // 0.10.0 dropped the deprecated `--rate-limit` alias entirely. Keep the old
+  // flag name for versions older than 0.9.0.
+  const rateLimitFlag = isVersionAtLeast(version, '0.9.0')
+    ? '--rate'
+    : '--rate-limit'
 
   const rateLimit = getInput('rateLimit')
   if (rateLimit) {
-    commonArgs.push(`--rate-limit=${rateLimit}`)
+    commonArgs.push(`${rateLimitFlag}=${rateLimit}`)
   }
 
   const telemetry = getInput('telemetry')
@@ -63,13 +94,14 @@ export async function run() {
     const version = getInput('version')
     info(`Setup vulnapi version ${version}`)
 
-    const installDir = await installVersion(version)
-    info(`vulnapi has been installed to ${installDir}`)
+    const { version: resolvedVersion, installDir } =
+      await installVersion(version)
+    info(`vulnapi ${resolvedVersion} has been installed to ${installDir}`)
 
     addPath(installDir)
     info('vulnapi has been added to the PATH')
 
-    const commonArgs = getCommonArgs()
+    const commonArgs = getCommonArgs(resolvedVersion)
 
     const execOptions: ExecOptions = {
       failOnStdErr: true
