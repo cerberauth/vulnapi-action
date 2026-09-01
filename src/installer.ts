@@ -15,7 +15,16 @@ const repo = 'vulnapi'
 
 const binName = 'vulnapi'
 
-export async function installVersion(version: string) {
+export interface InstalledVulnapi {
+  /** The resolved version (e.g. `v0.10.0`), with `latest` already resolved. */
+  version: string
+  /** The directory the `vulnapi` binary was installed to. */
+  installDir: string
+}
+
+export async function installVersion(
+  version: string
+): Promise<InstalledVulnapi> {
   const arch = os.arch()
   if (version === 'latest') {
     info('Getting latest release')
@@ -31,7 +40,7 @@ export async function installVersion(version: string) {
   const toolPath = findTool(binName, version, arch)
   if (toolPath) {
     info(`Found in cache @ ${toolPath}`)
-    return toolPath
+    return { version, installDir: toolPath }
   }
 
   info(`Downloading ${binName} version ${version}`)
@@ -45,7 +54,7 @@ export async function installVersion(version: string) {
   const cachedDir = await cacheDir(extPath, binName, version, arch)
   info(`Successfully cached to ${cachedDir}`)
 
-  return cachedDir
+  return { version, installDir: cachedDir }
 }
 
 function getToken(): string {
