@@ -87,6 +87,34 @@ jobs:
             eyJhbGci..."' # gitleaks:allow
 ```
 
+### Pull request comment
+
+On pull requests, the action posts a comment summarizing every finding (one row
+per finding, with full details in a collapsed section) and updates it on later
+runs. The step still fails when findings reach the severity threshold.
+
+```yaml
+name: Scan for API vulnerabilities
+
+on: [pull_request]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: VulnAPI
+        uses: cerberauth/vulnapi-action@v2
+        with:
+          curl: 'curl http://localhost:8080'
+          severityThreshold: 7
+          # Also keep a SARIF report, e.g. for upload-sarif or as an artifact
+          output-format: sarif
+```
+
 ## Inputs
 
 ### General
@@ -127,9 +155,28 @@ jobs:
 | proxy             | false    | The proxy server used during the scan.              |         |
 | severityThreshold | false    | The severity threshold to trigger a failure.        | `0`     |
 
+### Reports
+
+| Name              | Required | Description                                                                                     | Default             |
+| ----------------- | -------- | ----------------------------------------------------------------------------------------------- | ------------------- |
+| comment           | false    | Post (or update) a PR comment summarizing every finding. Needs `pull-requests: write`.          | `true`              |
+| scan-id           | false    | Keeps a separate PR comment per scan when several scans run on the same PR.                     |                     |
+| output-format     | false    | Write the report to a file: `json`, `yaml`, `jsonl`, `sarif`, `markdown`, `html` or `terminal`. |                     |
+| output-path       | false    | File path for `output-format`.                                                                  | under `RUNNER_TEMP` |
+| report-url        | false    | HTTP endpoint to POST the full report to.                                                       |                     |
+| report-format     | false    | Format for `report-url`.                                                                        | `json`              |
+| report-headers    | false    | Extra headers for `report-url`, one `Key: Value` per line.                                      |                     |
+| show-all-findings | false    | Show every finding in the terminal output.                                                      | `false`             |
+| no-color          | false    | Disable ANSI colors in terminal output.                                                         | `false`             |
+| quiet             | false    | Suppress the terminal display of the report.                                                    | `false`             |
+
 ## Outputs
 
-Scan results are output to the console.
+Scan results are output to the console and, on pull requests, as a PR comment.
+
+| Name        | Description                                                                |
+| ----------- | -------------------------------------------------------------------------- |
+| report-path | Path of the report file written for `output-format`/`output-path`, if any. |
 
 ## Disclaimer
 

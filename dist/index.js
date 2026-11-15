@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import { promises, readFileSync, existsSync } from 'fs';
 import * as path from 'path';
-import { resolve, normalize } from 'path';
+import path__default, { resolve, normalize } from 'path';
 import * as http from 'http';
 import http__default from 'http';
 import * as https from 'https';
@@ -45,6 +45,7 @@ import * as child from 'child_process';
 import { setTimeout as setTimeout$1 } from 'timers';
 import { createRequire } from 'node:module';
 import * as stream from 'stream';
+import { readFile, rm as rm$1 } from 'fs/promises';
 
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -181,6 +182,20 @@ function issueFileCommand(command, message) {
     fs.appendFileSync(filePath, `${toCommandValue(message)}${os.EOL}`, {
         encoding: 'utf8'
     });
+}
+function prepareKeyValueMessage(key, value) {
+    const delimiter = `ghadelimiter_${crypto.randomUUID()}`;
+    const convertedValue = toCommandValue(value);
+    // These should realistically never happen, but just in case someone finds a
+    // way to exploit uuid generation let's not allow keys or values that contain
+    // the delimiter.
+    if (key.includes(delimiter)) {
+        throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
+    }
+    if (convertedValue.includes(delimiter)) {
+        throw new Error(`Unexpected input: value should not contain the delimiter "${delimiter}"`);
+    }
+    return `${key}<<${delimiter}${os.EOL}${convertedValue}${os.EOL}${delimiter}`;
 }
 
 function getProxyUrl(reqUrl) {
@@ -47609,6 +47624,21 @@ function getInput(name, options) {
     const val = process.env[`INPUT_${name.replace(/ /g, '_').toUpperCase()}`] || '';
     return val.trim();
 }
+/**
+ * Sets the value of an output.
+ *
+ * @param     name     name of the output to set
+ * @param     value    value to store. Non-string values will be converted to a string via JSON.stringify
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setOutput(name, value) {
+    const filePath = process.env['GITHUB_OUTPUT'] || '';
+    if (filePath) {
+        return issueFileCommand('OUTPUT', prepareKeyValueMessage(name, value));
+    }
+    process.stdout.write(os.EOL);
+    issueCommand('set-output', { name }, toCommandValue(value));
+}
 //-----------------------------------------------------------------------
 // Results
 //-----------------------------------------------------------------------
@@ -47644,6 +47674,14 @@ function debug(message) {
  */
 function error(message, properties = {}) {
     issueCommand('error', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+}
+/**
+ * Adds a warning issue
+ * @param message warning issue message. Errors will be converted to string via toString()
+ * @param properties optional properties to add to the annotation.
+ */
+function warning(message, properties = {}) {
+    issueCommand('warning', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
 /**
  * Writes info to log with console.log.
@@ -54117,7 +54155,7 @@ function getOctokitOptions(token, options) {
     return opts;
 }
 
-new Context();
+const context = new Context();
 /**
  * Returns a hydrated octokit ready to use for GitHub Actions
  *
@@ -57442,6 +57480,424 @@ async function extractArchive(archivePath) {
     return extPath;
 }
 
+// GitHub caps issue/PR comment bodies at 65536 characters.
+const MAX_COMMENT_LENGTH = 65536;
+// reportx's own severity order, worst first.
+// See https://github.com/cerberauth/reportx/blob/main/finding.go
+const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
+// GitHub comments can't color text, so severities get a colored marker.
+const SEVERITY_MARKERS = {
+    critical: '🔴',
+    high: '🟠',
+    medium: '🟡',
+    low: '🔵',
+    info: '⚪'
+};
+function isPullRequestEvent() {
+    return ((context.eventName === 'pull_request' ||
+        context.eventName === 'pull_request_target') &&
+        context.payload.pull_request != null);
+}
+// The workflow run this action is executing in, used as a fallback link
+// when the full findings summary doesn't fit in a PR comment.
+function workflowRunUrl() {
+    const { owner, repo } = context.repo;
+    return `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+}
+function commentMarker(toolName, scanId) {
+    return scanId
+        ? `<!-- cerberauth/${toolName}/${scanId} -->`
+        : `<!-- cerberauth/${toolName} -->`;
+}
+function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+// Only active findings need attention. Reports may also carry findings that
+// are mitigated (e.g. a check that ran without finding a vulnerability),
+// accepted risks or false positives.
+function isActive(finding) {
+    return (finding.status ?? 'active') === 'active';
+}
+// Counted from the findings rather than metadata.by_severity, which also
+// counts findings that are not active.
+function severityCounts(findings) {
+    const counts = findings.reduce((acc, f) => {
+        acc[f.severity] = (acc[f.severity] ?? 0) + 1;
+        return acc;
+    }, {});
+    return SEVERITY_ORDER.filter((severity) => counts[severity]).map((severity) => [severity, counts[severity]]);
+}
+// Unknown severities sort after the known ones instead of before them.
+function severityRank(severity) {
+    const rank = SEVERITY_ORDER.indexOf(severity);
+    return rank === -1 ? SEVERITY_ORDER.length : rank;
+}
+// Colored severity label, e.g. "🔴 Critical".
+function severityLabel(severity) {
+    const marker = SEVERITY_MARKERS[severity];
+    return marker ? `${marker} ${capitalize(severity)}` : capitalize(severity);
+}
+// The finding's own docs page when reportx has one (references[0], the SARIF
+// rule helpUri), otherwise the tool's docs.
+function docsUrl(finding, options) {
+    return finding.references?.[0] ?? options.docsUrl;
+}
+// Findings grouped by endpoint (findings without one last), each group sorted
+// by severity, worst first.
+function groupByEndpoint(findings) {
+    const groups = new Map();
+    for (const f of findings) {
+        const group = groups.get(f.url) ?? [];
+        group.push(f);
+        groups.set(f.url, group);
+    }
+    return [...groups.entries()]
+        .sort(([a], [b]) => {
+        if (a === b)
+            return 0;
+        if (a === undefined)
+            return 1;
+        if (b === undefined)
+            return -1;
+        return a.localeCompare(b);
+    })
+        .map(([endpoint, group]) => [
+        endpoint,
+        [...group].sort((a, b) => severityRank(a.severity) - severityRank(b.severity) ||
+            a.title.localeCompare(b.title))
+    ]);
+}
+// Makes a value safe to put in a Markdown table cell: a `|` would start a new
+// column and a line break would end the row.
+function tableCell(value) {
+    return value.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
+}
+function congratsMessage(toolName) {
+    return `✅ No ${toolName} findings. Nice work! 🎉`;
+}
+// Top-level summary table: one row per finding with just enough to triage
+// (where, how bad, what) plus its docs link, grouped by endpoint and sorted by
+// severity. The endpoint is only shown on the first row of its group. Full
+// detail lives in the `<details>` block below it.
+function renderSummaryTable(findings, options) {
+    const rows = groupByEndpoint(findings).flatMap(([endpoint, group]) => group.map((f, i) => {
+        const endpointCell = i > 0 ? '' : endpoint ? tableCell(endpoint) : '—';
+        return `| ${endpointCell} | ${severityLabel(f.severity)} | ${tableCell(f.title)} | [Docs](${docsUrl(f, options)}) |`;
+    }));
+    return `| Endpoint | Severity | Vulnerability | Docs |\n| -------- | -------- | ------------- | ---- |\n${rows.join('\n')}`;
+}
+// Renders every field reportx reports for a single finding, for the hidden
+// details block. See finding.go for the schema this mirrors.
+function renderFindingDetails(finding, options) {
+    const meta = [`- **Docs:** ${docsUrl(finding, options)}`];
+    if (finding.parameter)
+        meta.push(`- **Parameter:** \`${finding.parameter}\``);
+    if (finding.cwe_id) {
+        meta.push(`- **CWE:** ${finding.cwe_id}${finding.cwe_name ? ` — ${finding.cwe_name}` : ''}`);
+    }
+    if (finding.owasp_top10) {
+        meta.push(`- **OWASP Top 10:** ${finding.owasp_top10}`);
+    }
+    if (finding.cvss31_score != null) {
+        meta.push(`- **CVSS 3.1:** ${finding.cvss31_score}${finding.cvss31_vector ? ` (${finding.cvss31_vector})` : ''}`);
+    }
+    if (finding.cvss40_score != null) {
+        meta.push(`- **CVSS 4.0:** ${finding.cvss40_score}${finding.cvss40_vector ? ` (${finding.cvss40_vector})` : ''}`);
+    }
+    if (finding.tags?.length) {
+        meta.push(`- **Tags:** ${finding.tags.join(', ')}`);
+    }
+    const otherReferences = finding.references?.slice(1) ?? [];
+    if (otherReferences.length > 0) {
+        meta.push(`- **References:** ${otherReferences.join(', ')}`);
+    }
+    const sections = [
+        `#### ${severityLabel(finding.severity)} — ${finding.title}`,
+        meta.join('\n')
+    ];
+    if (finding.description) {
+        sections.push(`**Description**\n\n${finding.description}`);
+    }
+    if (finding.remediation) {
+        sections.push(`**Remediation**\n\n${finding.remediation}`);
+    }
+    return sections.join('\n\n');
+}
+// Hidden `<details>` block carrying the full write-up for every finding,
+// grouped by endpoint like the summary table, so the visible comment stays
+// scannable while the full report is one click away, right there on the PR.
+function renderFindingsDetails(findings, options) {
+    const sections = groupByEndpoint(findings)
+        .map(([endpoint, group]) => {
+        const heading = `### ${endpoint ?? 'No endpoint'}`;
+        const body = group
+            .map((f) => renderFindingDetails(f, options))
+            .join('\n\n---\n\n');
+        return `${heading}\n\n${body}`;
+    })
+        .join('\n\n');
+    return `<details>\n\n<summary>Findings details</summary>\n\n${sections}\n\n</details>`;
+}
+function renderSeverityTable(findings) {
+    const counts = severityCounts(findings);
+    if (counts.length === 0) {
+        return 'No findings.';
+    }
+    const rows = counts
+        .map(([severity, count]) => `| ${severityLabel(severity)} | ${count} |`)
+        .join('\n');
+    return `| Severity | Count |\n|----------|-------|\n${rows}`;
+}
+// Like super-linter's summary comment: which scanner and version produced the
+// report, plus the scan target and how many checks ran.
+function footer(options, report) {
+    const lines = [`Powered by [${options.toolName}](${options.docsUrl})`];
+    const { version, target } = report.metadata;
+    if (version) {
+        lines.push(`${options.toolName} version: \`${version}\``);
+    }
+    if (target) {
+        lines.push(`Target: \`${target}\``);
+    }
+    const coverage = report.coverage;
+    if (coverage) {
+        lines.push(`Checks: ${coverage.run ?? 0} run, ${coverage.skipped ?? 0} skipped, ${coverage.errored ?? 0} errored`);
+    }
+    // A trailing backslash is a Markdown line break, as in super-linter's footer.
+    return `\n\n---\n\n${lines.join('\\\n')}`;
+}
+// Builds a PR comment body out of a reportx JSON report, in two parts, mirroring
+// how super-linter formats its own summary comment: a visible summary table
+// (one row per finding: vulnerability, endpoint, severity, docs), or a congrats
+// message when there are none, followed by a hidden `<details>` block carrying
+// every field reportx reports for each finding. When even the summary table
+// would be too large for a GitHub comment, falls back to a per-severity finding
+// count plus a link to the workflow run, where the full report is still
+// available (as an artifact, in the logs, ...).
+// When `options.scanId` is set, it's folded into the comment marker (and
+// shown in the heading), so several scans by the same tool on the same PR
+// (e.g. one per matrix target) each get their own comment that
+// `postScanComment` finds and updates independently, instead of the scans
+// clobbering a single shared comment.
+function buildCommentBody(reportJson, options) {
+    const report = JSON.parse(reportJson);
+    const marker = commentMarker(options.toolName, options.scanId);
+    const allFindings = report.findings ?? [];
+    const findings = allFindings.filter(isActive);
+    const inactiveCount = allFindings.length - findings.length;
+    const inactiveNote = inactiveCount === 0
+        ? ''
+        : `\n\n${inactiveCount} other result${inactiveCount === 1 ? ' is' : 's are'} not listed (mitigated, accepted risk or false positive).`;
+    const heading = options.scanId
+        ? `# ${options.toolName} scan results (${options.scanId})`
+        : `# ${options.toolName} scan results`;
+    const summary = findings.length === 0
+        ? congratsMessage(options.toolName)
+        : `${renderSummaryTable(findings, options)}\n\n${options.toolName} detected ${findings.length} finding${findings.length === 1 ? '' : 's'}.`;
+    const summaryWithNote = `${summary}${inactiveNote}`;
+    const details = findings.length === 0
+        ? ''
+        : `\n\n${renderFindingsDetails(findings, options)}`;
+    const full = `${marker}\n${heading}\n\n${summaryWithNote}${footer(options, report)}${details}`;
+    if (full.length <= MAX_COMMENT_LENGTH) {
+        return full;
+    }
+    // Too large with the details block: keep the summary table and link to the
+    // workflow run for the full write-up.
+    const summaryOnly = `${marker}\n${heading}\n\n${summaryWithNote}\n\nThe findings details are too large for a PR comment — see the [workflow run](${workflowRunUrl()}) for the full report.${footer(options, report)}`;
+    if (summaryOnly.length <= MAX_COMMENT_LENGTH) {
+        return summaryOnly;
+    }
+    const table = `${heading}\n\n${renderSeverityTable(findings)}\n\nThe full findings summary is too large for a PR comment — see the [workflow run](${workflowRunUrl()}) for details.`;
+    return `${marker}\n${table}${footer(options, report)}`;
+}
+// Creates or updates the PR comment carrying the scan results. Any failure
+// (most commonly a token without pull-requests/issues write access, e.g. on
+// forked-repo pull requests) is logged as a warning rather than failing the
+// action, since commenting is a best-effort convenience on top of the scan.
+// The comment to update, if any, is identified by the marker on the first
+// line of `body` (as produced by buildCommentBody), so different tools
+// commenting on the same PR don't clobber each other's comments.
+async function postScanComment(token, body) {
+    const pullRequest = context.payload.pull_request;
+    if (!pullRequest) {
+        debug('Not running for a pull request, skipping comment');
+        return;
+    }
+    const { owner, repo } = context.repo;
+    const issue_number = pullRequest.number;
+    const marker = body.split('\n')[0];
+    try {
+        const octokit = getOctokit(token);
+        // Paginate: the first page only holds 30 comments, so on busy pull
+        // requests the existing comment would be missed and a duplicate posted.
+        const comments = await octokit.paginate(octokit.rest.issues.listComments, {
+            owner,
+            repo,
+            issue_number,
+            per_page: 100
+        });
+        const existing = comments.find((c) => c.body?.startsWith(marker));
+        if (existing) {
+            await octokit.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body
+            });
+            info(`Updated scan results comment on PR #${issue_number}`);
+        }
+        else {
+            await octokit.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+            });
+            info(`Created scan results comment on PR #${issue_number}`);
+        }
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        warning(`Skipping PR comment (does the token have pull-requests: write permission?): ${message}`);
+    }
+}
+
+// File extensions reportx's formatters use for each --format/--output-format
+// value, mirroring format.Formatter.FileExtension() in the reportx package.
+const FORMAT_EXTENSIONS = {
+    json: '.json',
+    yaml: '.yaml',
+    yml: '.yaml',
+    jsonl: '.jsonl',
+    sarif: '.sarif.json',
+    markdown: '.md',
+    md: '.md',
+    html: '.html',
+    terminal: '.txt',
+    text: '.txt',
+    plain: '.txt'
+};
+function hasFlag(args, flag) {
+    return args.some((a) => a === flag || a.startsWith(`${flag}=`));
+}
+function getFlagValue(args, flag) {
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === flag)
+            return args[i + 1];
+        // Keep everything after the first `=`: values may contain `=` themselves.
+        if (args[i].startsWith(`${flag}=`))
+            return args[i].slice(flag.length + 1);
+    }
+    return undefined;
+}
+function parseOutputFlags(args) {
+    return {
+        path: getFlagValue(args, '--output'),
+        format: getFlagValue(args, '--output-format')
+    };
+}
+function tempReportPath(format) {
+    const dir = process.env['RUNNER_TEMP'] || os__default.tmpdir();
+    const ext = FORMAT_EXTENSIONS[format] ?? '.txt';
+    return path__default.join(dir, `reportx-report-${Date.now()}${ext}`);
+}
+// Turns action inputs for reportx's own CLI flags (see cobrax/reportx in
+// github.com/cerberauth/x) into CLI args, so users get first-class access to
+// reportx's output formats, HTTP transport, and display options without
+// hand-crafting a raw args input. Existing flags already present in
+// commandArgs are left untouched.
+function appendReportxFlags(commandArgs) {
+    const outputFormat = getInput('output-format');
+    const outputPath = getInput('output-path');
+    if (!hasFlag(commandArgs, '--output') && (outputFormat || outputPath)) {
+        const format = outputFormat || 'json';
+        commandArgs.push('--output', outputPath || tempReportPath(format), '--output-format', format);
+    }
+    const reportUrl = getInput('report-url');
+    if (!hasFlag(commandArgs, '--report-url') && reportUrl) {
+        commandArgs.push('--report-url', reportUrl);
+        const reportFormat = getInput('report-format');
+        if (reportFormat && !hasFlag(commandArgs, '--report-format')) {
+            commandArgs.push('--report-format', reportFormat);
+        }
+        const reportHeaders = getInput('report-headers');
+        for (const line of reportHeaders.split('\n')) {
+            const header = line.trim();
+            if (!header)
+                continue;
+            // Accepts "Key: Value" or "Key=Value", one per line.
+            const sepIndex = header.search(/[:=]/);
+            if (sepIndex === -1)
+                continue;
+            const key = header.slice(0, sepIndex).trim();
+            const value = header.slice(sepIndex + 1).trim();
+            if (!key || !value)
+                continue;
+            commandArgs.push('--report-header', `${key}=${value}`);
+        }
+    }
+    if (getInput('show-all-findings') === 'true' &&
+        !hasFlag(commandArgs, '--show-all-findings')) {
+        commandArgs.push('--show-all-findings');
+    }
+    if (getInput('no-color') === 'true' && !hasFlag(commandArgs, '--no-color')) {
+        commandArgs.push('--no-color');
+    }
+    if (getInput('quiet') === 'true' && !hasFlag(commandArgs, '--quiet')) {
+        commandArgs.push('--quiet');
+    }
+}
+
+const VULNAPI_DOCS_URL = 'https://www.cerberauth.com/docs/vulnapi/';
+function prepareReport(commandArgs) {
+    appendReportxFlags(commandArgs);
+    const persisted = parseOutputFlags(commandArgs);
+    const report = {
+        persistedPath: persisted.path,
+        ownsCommentPath: false
+    };
+    if (getInput('comment') === 'false' || !isPullRequestEvent()) {
+        return report;
+    }
+    if (persisted.path) {
+        if ((persisted.format ?? 'json') === 'json') {
+            report.commentPath = persisted.path;
+        }
+        return report;
+    }
+    report.commentPath = tempReportPath('json');
+    report.ownsCommentPath = true;
+    commandArgs.push('--output', report.commentPath, '--output-format', 'json');
+    return report;
+}
+async function publishReport(report, token) {
+    if (report.persistedPath) {
+        setOutput('report-path', report.persistedPath);
+    }
+    if (!report.commentPath) {
+        return;
+    }
+    try {
+        const reportJson = await readFile(report.commentPath, 'utf8');
+        const body = buildCommentBody(reportJson, {
+            toolName: 'vulnapi',
+            docsUrl: VULNAPI_DOCS_URL,
+            scanId: getInput('scan-id') || undefined
+        });
+        await postScanComment(token, body);
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        warning(`Skipping PR comment, the vulnapi report is unavailable: ${message}`);
+    }
+    finally {
+        if (report.ownsCommentPath) {
+            await rm$1(report.commentPath, { force: true }).catch(() => { });
+        }
+    }
+}
+
 function getArgsFromInput(input) {
     const inputArgs = yargsParser(input);
     debug(`Parsed input args: ${JSON.stringify(inputArgs)}`);
@@ -57475,6 +57931,14 @@ function isVersionAtLeast(version, target) {
         }
     }
     return true;
+}
+// Until 0.11.0, vulnapi writes the --output file in the --format format.
+function useFormatForOutputFile(args) {
+    const index = args.indexOf('--output-format');
+    if (index === -1)
+        return;
+    const [, format] = args.splice(index, 2);
+    args.push(`--format=${format}`);
 }
 function getCommonArgs(version) {
     const commonArgs = [];
@@ -57519,26 +57983,35 @@ async function run() {
         addPath(installDir);
         info('vulnapi has been added to the PATH');
         const commonArgs = getCommonArgs(resolvedVersion);
-        // vulnapi exits non-zero when findings reach the severity threshold, so
-        // the exit code is the failure signal. Do not fail on stderr: vulnapi also
-        // writes warnings there (deprecations, telemetry export errors).
-        const execOptions = {
-            failOnStdErr: false
-        };
+        let scanArgs;
         const curl = getInput('curl');
         const openapi = getInput('openapi');
         if (curl) {
             debug(`Parsing curl input: ${curl}`);
-            const args = getArgsFromInput(curl.replace(/^curl\s+/, ''));
-            debug(`Running vulnapi scan with curl: ${JSON.stringify(args)}`);
-            await exec('vulnapi', ['scan', 'curl', ...args, ...commonArgs, '--no-progress'], execOptions);
+            scanArgs = ['curl', ...getArgsFromInput(curl.replace(/^curl\s+/, ''))];
         }
         else if (openapi) {
-            debug(`Running vulnapi scan with openapi: ${openapi}`);
-            await exec('vulnapi', ['scan', 'openapi', openapi, ...commonArgs, '--no-progress'], execOptions);
+            scanArgs = ['openapi', openapi];
         }
         else {
             setFailed('You must provide curl or openapi input');
+            return;
+        }
+        const commandArgs = ['scan', ...scanArgs, ...commonArgs];
+        const report = prepareReport(commandArgs);
+        if (!isVersionAtLeast(resolvedVersion, '0.11.1')) {
+            useFormatForOutputFile(commandArgs);
+        }
+        commandArgs.push('--no-progress');
+        const execOptions = {
+            failOnStdErr: false,
+            ignoreReturnCode: true
+        };
+        debug(`Running vulnapi with: ${JSON.stringify(commandArgs)}`);
+        const exitCode = await exec('vulnapi', commandArgs, execOptions);
+        await publishReport(report, getInput('token'));
+        if (exitCode !== 0) {
+            setFailed(`vulnapi exited with code ${exitCode}: vulnerabilities at or above the severity threshold were found, or the scan failed`);
         }
     }
     catch (error) {

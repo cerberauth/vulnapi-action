@@ -3,6 +3,7 @@ import { exec, ExecOptions } from '@actions/exec'
 import parseArgs from 'yargs-parser'
 
 import { installVersion } from './installer.js'
+import { prepareReport, publishReport } from './report.js'
 
 function getArgsFromInput(input: string) {
   const inputArgs = parseArgs(input)
@@ -44,6 +45,14 @@ function isVersionAtLeast(version: string, target: string): boolean {
     }
   }
   return true
+}
+
+// Until 0.11.0, vulnapi writes the --output file in the --format format.
+function useFormatForOutputFile(args: string[]) {
+  const index = args.indexOf('--output-format')
+  if (index === -1) return
+  const [, format] = args.splice(index, 2)
+  args.push(`--format=${format}`)
 }
 
 function getCommonArgs(version: string) {
@@ -103,34 +112,40 @@ export async function run() {
 
     const commonArgs = getCommonArgs(resolvedVersion)
 
-    // vulnapi exits non-zero when findings reach the severity threshold, so
-    // the exit code is the failure signal. Do not fail on stderr: vulnapi also
-    // writes warnings there (deprecations, telemetry export errors).
-    const execOptions: ExecOptions = {
-      failOnStdErr: false
-    }
-
+    let scanArgs: string[]
     const curl = getInput('curl')
     const openapi = getInput('openapi')
     if (curl) {
       debug(`Parsing curl input: ${curl}`)
-      const args = getArgsFromInput(curl.replace(/^curl\s+/, ''))
-
-      debug(`Running vulnapi scan with curl: ${JSON.stringify(args)}`)
-      await exec(
-        'vulnapi',
-        ['scan', 'curl', ...args, ...commonArgs, '--no-progress'],
-        execOptions
-      )
+      scanArgs = ['curl', ...getArgsFromInput(curl.replace(/^curl\s+/, ''))]
     } else if (openapi) {
-      debug(`Running vulnapi scan with openapi: ${openapi}`)
-      await exec(
-        'vulnapi',
-        ['scan', 'openapi', openapi, ...commonArgs, '--no-progress'],
-        execOptions
-      )
+      scanArgs = ['openapi', openapi]
     } else {
       setFailed('You must provide curl or openapi input')
+      return
+    }
+
+    const commandArgs = ['scan', ...scanArgs, ...commonArgs]
+    const report = prepareReport(commandArgs)
+    if (!isVersionAtLeast(resolvedVersion, '0.11.1')) {
+      useFormatForOutputFile(commandArgs)
+    }
+    commandArgs.push('--no-progress')
+
+    const execOptions: ExecOptions = {
+      failOnStdErr: false,
+      ignoreReturnCode: true
+    }
+
+    debug(`Running vulnapi with: ${JSON.stringify(commandArgs)}`)
+    const exitCode = await exec('vulnapi', commandArgs, execOptions)
+
+    await publishReport(report, getInput('token'))
+
+    if (exitCode !== 0) {
+      setFailed(
+        `vulnapi exited with code ${exitCode}: vulnerabilities at or above the severity threshold were found, or the scan failed`
+      )
     }
   } catch (error) {
     if (error instanceof Error) {

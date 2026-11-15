@@ -45,6 +45,7 @@
     "@actions/exec": "3.0.0",
     "@actions/github": "9.1.1",
     "@actions/tool-cache": "4.0.0",
+    "@cerberauth/gha-reportx": "1.0.0",
     "yargs-parser": "22.0.0"
   },
   "devDependencies": {

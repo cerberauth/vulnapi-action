@@ -53,6 +53,80 @@ inputs:
     description: 'The severity threshold to trigger a failure'
     required: false
 
+  comment:
+    description:
+      'When the workflow runs for a pull request, post (or update) a PR comment
+      summarizing every finding. Requires the token to have pull-requests: write
+      permission; without it a warning is logged instead. The step still fails
+      when findings reach the severity threshold. Set to false to disable.'
+    required: false
+    default: 'true'
+
+  scan-id:
+    description:
+      'Distinguishes the PR comments of several scans run on the same pull
+      request (e.g. one per target or matrix job), so each keeps its own comment
+      instead of overwriting the others.'
+    required: false
+    default: ''
+
+  output-format:
+    description:
+      'Write the full report to a file in this format: json, yaml, jsonl, sarif,
+      markdown, html or terminal. The file path is exposed as the report-path
+      output (e.g. to upload as an artifact or feed sarif to
+      github/codeql-action/upload-sarif).'
+    required: false
+    default: ''
+
+  output-path:
+    description:
+      'File path for output-format. Defaults to a generated path under
+      RUNNER_TEMP.'
+    required: false
+    default: ''
+
+  report-url:
+    description: 'HTTP endpoint to POST the full report to.'
+    required: false
+    default: ''
+
+  report-format:
+    description:
+      'Format for report-url: json, yaml, jsonl, sarif, markdown, html.'
+    required: false
+    default: ''
+
+  report-headers:
+    description:
+      'Extra HTTP headers for report-url, one "Key: Value" (or "Key=Value") pair
+      per line, e.g. for an authorization token.'
+    required: false
+    default: ''
+
+  show-all-findings:
+    description:
+      'Show every finding in the terminal output, not only the ones at or above
+      the severity threshold. Report files, report-url and the PR comment always
+      include every finding.'
+    required: false
+    default: 'false'
+
+  no-color:
+    description: 'Disable ANSI colors in terminal output.'
+    required: false
+    default: 'false'
+
+  quiet:
+    description: 'Suppress the terminal display of the report.'
+    required: false
+    default: 'false'
+
+outputs:
+  report-path:
+    description:
+      'Path of the report file written for output-format/output-path, if any.'
+
 runs:
   using: node24
   main: dist/index.js

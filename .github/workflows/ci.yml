@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   test-typescript:
@@ -23,6 +24,7 @@ jobs:
     permissions:
       contents: read
       packages: read
+      pull-requests: write
 
     env:
       DOCKER_IMAGE: ghcr.io/cerberauth/api-vulns-challenges/jwt-alg-none-bypass:latest
@@ -55,6 +57,8 @@ jobs:
         uses: ./
         with:
           scans: jwt.*
+          scan-id: demo-with-findings
+          output-format: json
           curl: |
             curl http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}"
 
@@ -63,6 +67,13 @@ jobs:
         run: |
           echo "Expected scan to fail but it succeeded (no vulnerabilities detected)"
           exit 1
+
+      - name: Check the report was written despite the failure
+        env:
+          REPORT_PATH: ${{ steps.test-curl-action.outputs.report-path }}
+        run: |
+          test -n "$REPORT_PATH"
+          jq -e '.findings | length > 0' "$REPORT_PATH"
 
       # - name: Test OpenAPI Local Action
       #   uses: ./
@@ -85,6 +96,7 @@ jobs:
     permissions:
       contents: read
       packages: read
+      pull-requests: write
 
     env:
       DOCKER_IMAGE: ghcr.io/cerberauth/api-vulns-challenges/jwt-strong-eddsa-key:latest
@@ -116,6 +128,7 @@ jobs:
         with:
           rateLimit: 1000/s
           excludeScans: misconfiguration.*
+          comment: false
           curl: |
             curl http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}"
 
@@ -123,6 +136,7 @@ jobs:
         uses: ./
         with:
           scans: jwt.*
+          scan-id: demo-no-findings
           curl: |
             curl http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}"
 
@@ -133,6 +147,7 @@ jobs:
           curl: |
             curl http://localhost:8080 -H "Authorization: Bearer ${{ steps.get-jwt.outputs.jwt }}"
           telemetry: false
+          comment: false
 
       # - name: Test OpenAPI Local Action
       #   uses: ./
