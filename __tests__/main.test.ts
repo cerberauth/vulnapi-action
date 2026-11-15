@@ -319,6 +319,46 @@ describe('main.ts', () => {
     })
   })
 
+  it('passes authentication inputs to vulnapi and secrets through the environment', async () => {
+    mockInputs({
+      version: 'latest',
+      openapi: './openapi.json',
+      'client-id': 'client',
+      'client-secret': 's3cr3t',
+      'token-url': 'https://idp.example.com/token',
+      'oauth2-scopes': 'users:read\norders:write',
+      'oauth2-password': 'p4ss',
+      'login-data': '{"password":"x"}',
+      'jwt-public-key': './key.pem'
+    })
+
+    await run()
+
+    const args = vulnapiArgs()
+    expect(args).toEqual(
+      expect.arrayContaining([
+        '--client-id=client',
+        '--token-url=https://idp.example.com/token',
+        '--oauth2-scope=users:read',
+        '--oauth2-scope=orders:write',
+        '--login-data={"password":"x"}',
+        '--jwt-public-key=./key.pem'
+      ])
+    )
+    expect(args.join(' ')).not.toContain('s3cr3t')
+    expect(args.join(' ')).not.toContain('p4ss')
+    const env = exec.exec.mock.calls[0][2]?.env
+    expect(env).toEqual(
+      expect.objectContaining({
+        VULNAPI_CLIENT_SECRET: 's3cr3t',
+        VULNAPI_OAUTH2_PASSWORD: 'p4ss'
+      })
+    )
+    expect(core.setSecret).toHaveBeenCalledWith('s3cr3t')
+    expect(core.setSecret).toHaveBeenCalledWith('p4ss')
+    expect(core.setSecret).toHaveBeenCalledWith('{"password":"x"}')
+  })
+
   it('passes report-url and display inputs through to vulnapi', async () => {
     mockInputs({
       version: 'latest',

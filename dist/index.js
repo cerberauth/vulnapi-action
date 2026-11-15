@@ -47598,6 +47598,38 @@ var ExitCode;
     ExitCode[ExitCode["Failure"] = 1] = "Failure";
 })(ExitCode || (ExitCode = {}));
 /**
+ * Registers a secret which will get masked from logs
+ *
+ * @param secret - Value of the secret to be masked
+ * @remarks
+ * This function instructs the Actions runner to mask the specified value in any
+ * logs produced during the workflow run. Once registered, the secret value will
+ * be replaced with asterisks (***) whenever it appears in console output, logs,
+ * or error messages.
+ *
+ * This is useful for protecting sensitive information such as:
+ * - API keys
+ * - Access tokens
+ * - Authentication credentials
+ * - URL parameters containing signatures (SAS tokens)
+ *
+ * Note that masking only affects future logs; any previous appearances of the
+ * secret in logs before calling this function will remain unmasked.
+ *
+ * @example
+ * ```typescript
+ * // Register an API token as a secret
+ * const apiToken = "abc123xyz456";
+ * setSecret(apiToken);
+ *
+ * // Now any logs containing this value will show *** instead
+ * console.log(`Using token: ${apiToken}`); // Outputs: "Using token: ***"
+ * ```
+ */
+function setSecret(secret) {
+    issueCommand('add-mask', {}, secret);
+}
+/**
  * Prepends inputPath to the PATH (for this action and future actions)
  * @param inputPath
  */
@@ -57974,6 +58006,46 @@ function getCommonArgs(version) {
     }
     return commonArgs;
 }
+const authFlagInputs = [
+    'client-id',
+    'token-url',
+    'oauth2-username',
+    'login-command',
+    'login-url',
+    'login-data',
+    'login-token-field',
+    'jwt-public-key'
+];
+const authSecretInputs = {
+    'client-secret': 'VULNAPI_CLIENT_SECRET',
+    'oauth2-password': 'VULNAPI_OAUTH2_PASSWORD'
+};
+function getAuthArgs() {
+    const args = [];
+    const env = {};
+    for (const input of authFlagInputs) {
+        const value = getInput(input);
+        if (value) {
+            if (input === 'login-data') {
+                setSecret(value);
+            }
+            args.push(`--${input}=${value}`);
+        }
+    }
+    for (const scope of getInput('oauth2-scopes').split(/\s+/)) {
+        if (scope) {
+            args.push(`--oauth2-scope=${scope}`);
+        }
+    }
+    for (const [input, name] of Object.entries(authSecretInputs)) {
+        const value = getInput(input);
+        if (value) {
+            setSecret(value);
+            env[name] = value;
+        }
+    }
+    return { args, env };
+}
 async function run() {
     try {
         const version = getInput('version');
@@ -57997,7 +58069,8 @@ async function run() {
             setFailed('You must provide curl or openapi input');
             return;
         }
-        const commandArgs = ['scan', ...scanArgs, ...commonArgs];
+        const auth = getAuthArgs();
+        const commandArgs = ['scan', ...scanArgs, ...commonArgs, ...auth.args];
         const report = prepareReport(commandArgs);
         if (!isVersionAtLeast(resolvedVersion, '0.11.1')) {
             useFormatForOutputFile(commandArgs);
@@ -58005,7 +58078,8 @@ async function run() {
         commandArgs.push('--no-progress');
         const execOptions = {
             failOnStdErr: false,
-            ignoreReturnCode: true
+            ignoreReturnCode: true,
+            env: { ...process.env, ...auth.env }
         };
         debug(`Running vulnapi with: ${JSON.stringify(commandArgs)}`);
         const exitCode = await exec('vulnapi', commandArgs, execOptions);
