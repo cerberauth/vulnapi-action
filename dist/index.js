@@ -57354,7 +57354,7 @@ async function installVersion(version) {
     const toolPath = find(binName, version, arch);
     if (toolPath) {
         info(`Found in cache @ ${toolPath}`);
-        return toolPath;
+        return { version, installDir: toolPath };
     }
     info(`Downloading ${binName} version ${version}`);
     const downloadPath = await downloadVulnapi(version, arch);
@@ -57364,7 +57364,7 @@ async function installVersion(version) {
     info('Adding to the cache ...');
     const cachedDir = await cacheDir(extPath, binName, version, arch);
     info(`Successfully cached to ${cachedDir}`);
-    return cachedDir;
+    return { version, installDir: cachedDir };
 }
 function getToken() {
     const token = getInput('token') || process.env.GITHUB_TOKEN;
@@ -57456,11 +57456,37 @@ function getArgsFromInput(input) {
         return values.map((v) => `--${key}=${v}`);
     });
 }
-function getCommonArgs() {
+function isVersionAtLeast(version, target) {
+    const parse = (v) => v
+        .replace(/^v/, '')
+        .split(/[.+-]/)
+        .slice(0, 3)
+        .map((n) => parseInt(n, 10));
+    const current = parse(version);
+    if (current.some((n) => Number.isNaN(n))) {
+        return true;
+    }
+    const wanted = parse(target);
+    for (let i = 0; i < 3; i++) {
+        const a = current[i] ?? 0;
+        const b = wanted[i] ?? 0;
+        if (a !== b) {
+            return a > b;
+        }
+    }
+    return true;
+}
+function getCommonArgs(version) {
     const commonArgs = [];
+    // vulnapi renamed the `--rate-limit` flag to `--rate` starting with 0.9.0, and
+    // 0.10.0 dropped the deprecated `--rate-limit` alias entirely. Keep the old
+    // flag name for versions older than 0.9.0.
+    const rateLimitFlag = isVersionAtLeast(version, '0.9.0')
+        ? '--rate'
+        : '--rate-limit';
     const rateLimit = getInput('rateLimit');
     if (rateLimit) {
-        commonArgs.push(`--rate-limit=${rateLimit}`);
+        commonArgs.push(`${rateLimitFlag}=${rateLimit}`);
     }
     const telemetry = getInput('telemetry');
     if (telemetry && (telemetry === 'false' || telemetry === '0')) {
@@ -57488,13 +57514,16 @@ async function run() {
     try {
         const version = getInput('version');
         info(`Setup vulnapi version ${version}`);
-        const installDir = await installVersion(version);
-        info(`vulnapi has been installed to ${installDir}`);
+        const { version: resolvedVersion, installDir } = await installVersion(version);
+        info(`vulnapi ${resolvedVersion} has been installed to ${installDir}`);
         addPath(installDir);
         info('vulnapi has been added to the PATH');
-        const commonArgs = getCommonArgs();
+        const commonArgs = getCommonArgs(resolvedVersion);
+        // vulnapi exits non-zero when findings reach the severity threshold, so
+        // the exit code is the failure signal. Do not fail on stderr: vulnapi also
+        // writes warnings there (deprecations, telemetry export errors).
         const execOptions = {
-            failOnStdErr: true
+            failOnStdErr: false
         };
         const curl = getInput('curl');
         const openapi = getInput('openapi');

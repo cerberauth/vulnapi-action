@@ -27,7 +27,7 @@ describe('main.ts', () => {
     })
     core.addPath.mockImplementation(() => {})
     installer.installVersion.mockImplementation(async () => {
-      return '/path/to/vulnapi'
+      return { version: 'v0.10.0', installDir: '/path/to/vulnapi' }
     })
 
     await run()
