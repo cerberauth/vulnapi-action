@@ -87,6 +87,22 @@ jobs:
             eyJhbGci..."' # gitleaks:allow
 ```
 
+### Using a configuration file
+
+```yaml
+- name: VulnAPI
+  uses: cerberauth/vulnapi-action@v2
+  with:
+    config: 'vulnapi.yaml'
+    env: 'staging'
+  env:
+    USER_TOKEN: ${{ secrets.USER_TOKEN }}
+```
+
+Without `curl` or `openapi`, the target of the
+[configuration file](https://www.cerberauth.com/docs/vulnapi/reference/configuration-file/)
+is scanned. Requires vulnapi 0.12.0 or later.
+
 ### Pull request comment
 
 On pull requests, the action posts a comment summarizing every finding (one row
@@ -144,6 +160,13 @@ jobs:
 | openapi | false | The OpenAPI file location (path or URL) | |
 
 <!-- textlint-enable terminology -->
+
+### Configuration File Options
+
+| Name   | Required | Description                                     | Default |
+| ------ | -------- | ----------------------------------------------- | ------- |
+| config | false    | Path to a `vulnapi.yaml` configuration file.    |         |
+| env    | false    | Environment of the configuration file to apply. |         |
 
 ### VulnAPI Supported Flags
 

@@ -26,6 +26,18 @@ inputs:
     description: 'The OpenAPI file used to run API vulnerability scans'
     required: false
 
+  config:
+    description:
+      'Path to a vulnapi.yaml configuration file. Without curl or openapi input,
+      the target of the file is scanned. Requires vulnapi 0.12.0 or later.'
+    required: false
+
+  env:
+    description:
+      'Environment of the configuration file to apply. Requires vulnapi 0.12.0
+      or later.'
+    required: false
+
   scans:
     description: 'The scans performed'
     required: false

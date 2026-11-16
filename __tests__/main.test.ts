@@ -94,8 +94,49 @@ describe('main.ts', () => {
 
     expect(exec.exec).not.toHaveBeenCalled()
     expect(core.setFailed).toHaveBeenCalledWith(
-      'You must provide curl or openapi input'
+      'You must provide curl, openapi or config input'
     )
+  })
+
+  describe('configuration file', () => {
+    it('scans the target of the configuration file', async () => {
+      mockInputs({ version: 'latest', config: 'vulnapi.yaml', env: 'staging' })
+
+      await run()
+
+      const args = vulnapiArgs()
+      expect(args.slice(0, 1)).toEqual(['scan'])
+      expect(args).toContain('--config=vulnapi.yaml')
+      expect(args).toContain('--env=staging')
+      expect(args).not.toContain('curl')
+      expect(args).not.toContain('openapi')
+    })
+
+    it('passes the configuration file along with an openapi input', async () => {
+      mockInputs({
+        version: 'latest',
+        openapi: 'openapi.yaml',
+        config: '.vulnapi.yaml'
+      })
+
+      await run()
+
+      const args = vulnapiArgs()
+      expect(args.slice(0, 3)).toEqual(['scan', 'openapi', 'openapi.yaml'])
+      expect(args).toContain('--config=.vulnapi.yaml')
+    })
+
+    it('requires vulnapi 0.12.0 or later', async () => {
+      mockInstalledVersion('v0.11.0')
+      mockInputs({ version: 'v0.11.0', config: 'vulnapi.yaml' })
+
+      await run()
+
+      expect(exec.exec).not.toHaveBeenCalled()
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'The config and env inputs require vulnapi 0.12.0 or later'
+      )
+    })
   })
 
   describe('failing on findings', () => {

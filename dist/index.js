@@ -57972,6 +57972,14 @@ function getCommonArgs(version) {
     if (severityThreshold) {
         commonArgs.push(`--severity-threshold=${severityThreshold}`);
     }
+    const config = getInput('config');
+    if (config) {
+        commonArgs.push(`--config=${config}`);
+    }
+    const env = getInput('env');
+    if (env) {
+        commonArgs.push(`--env=${env}`);
+    }
     return commonArgs;
 }
 async function run() {
@@ -57982,6 +57990,12 @@ async function run() {
         info(`vulnapi ${resolvedVersion} has been installed to ${installDir}`);
         addPath(installDir);
         info('vulnapi has been added to the PATH');
+        const config = getInput('config');
+        const env = getInput('env');
+        if ((config || env) && !isVersionAtLeast(resolvedVersion, '0.12.0')) {
+            setFailed('The config and env inputs require vulnapi 0.12.0 or later');
+            return;
+        }
         const commonArgs = getCommonArgs(resolvedVersion);
         let scanArgs;
         const curl = getInput('curl');
@@ -57993,8 +58007,11 @@ async function run() {
         else if (openapi) {
             scanArgs = ['openapi', openapi];
         }
+        else if (config) {
+            scanArgs = [];
+        }
         else {
-            setFailed('You must provide curl or openapi input');
+            setFailed('You must provide curl, openapi or config input');
             return;
         }
         const commandArgs = ['scan', ...scanArgs, ...commonArgs];
