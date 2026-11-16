@@ -53,6 +53,75 @@ inputs:
     description: 'The severity threshold to trigger a failure'
     required: false
 
+  client-id:
+    description:
+      'OAuth2 client ID used to obtain an access token for the scan (client
+      credentials or password flow).'
+    required: false
+    default: ''
+
+  client-secret:
+    description: 'OAuth2 client secret. Pass it from a secret.'
+    required: false
+    default: ''
+
+  token-url:
+    description:
+      'OAuth2 token endpoint, overriding the one of the OpenAPI security scheme.
+      Required with curl.'
+    required: false
+    default: ''
+
+  oauth2-scopes:
+    description: 'OAuth2 scopes to request, separated by spaces or new lines.'
+    required: false
+    default: ''
+
+  oauth2-username:
+    description: 'Resource owner username for the OAuth2 password flow.'
+    required: false
+    default: ''
+
+  oauth2-password:
+    description:
+      'Resource owner password for the OAuth2 password flow. Pass it from a
+      secret.'
+    required: false
+    default: ''
+
+  login-command:
+    description:
+      'Command printing the token to use on stdout, run before the scan and when
+      the token expires.'
+    required: false
+    default: ''
+
+  login-url:
+    description:
+      'URL called to obtain the token to use, before the scan and when the token
+      expires.'
+    required: false
+    default: ''
+
+  login-data:
+    description: 'Body sent to login-url (JSON or form encoded).'
+    required: false
+    default: ''
+
+  login-token-field:
+    description:
+      'Field of the login-url JSON response holding the token (dot separated
+      path, default access_token).'
+    required: false
+    default: ''
+
+  jwt-public-key:
+    description:
+      'Path or URL to the PEM public key of the JWT under test (defaults to the
+      key of /.well-known/jwks.json).'
+    required: false
+    default: ''
+
   comment:
     description:
       'When the workflow runs for a pull request, post (or update) a PR comment

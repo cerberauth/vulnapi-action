@@ -155,6 +155,26 @@ jobs:
 | proxy             | false    | The proxy server used during the scan.              |         |
 | severityThreshold | false    | The severity threshold to trigger a failure.        | `0`     |
 
+### Authentication
+
+VulnAPI obtains the credential under test before the scan and refreshes it when
+it expires. See
+[Authenticated Scanning](https://vulnapi.cerberauth.com/docs/authenticated-scanning).
+
+| Name              | Required | Description                                                            | Default        |
+| ----------------- | -------- | ---------------------------------------------------------------------- | -------------- |
+| client-id         | false    | OAuth2 client ID (client credentials or password flow).                |                |
+| client-secret     | false    | OAuth2 client secret, passed to vulnapi through the environment.       |                |
+| token-url         | false    | OAuth2 token endpoint, overriding the one of the security scheme.      |                |
+| oauth2-scopes     | false    | OAuth2 scopes, separated by spaces or new lines.                       |                |
+| oauth2-username   | false    | Username for the OAuth2 password flow.                                 |                |
+| oauth2-password   | false    | Password for the OAuth2 password flow, passed through the environment. |                |
+| login-command     | false    | Command printing the token on stdout.                                  |                |
+| login-url         | false    | Login endpoint returning the token in JSON.                            |                |
+| login-data        | false    | Body sent to `login-url`.                                              |                |
+| login-token-field | false    | Field of the login response holding the token.                         | `access_token` |
+| jwt-public-key    | false    | PEM public key of the JWT under test, defaults to the JWKS of the API. |                |
+
 ### Reports
 
 | Name              | Required | Description                                                                                     | Default             |

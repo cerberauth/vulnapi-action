@@ -1,4 +1,11 @@
-import { getInput, info, setFailed, addPath, debug } from '@actions/core'
+import {
+  getInput,
+  info,
+  setFailed,
+  addPath,
+  debug,
+  setSecret
+} from '@actions/core'
 import { exec, ExecOptions } from '@actions/exec'
 import parseArgs from 'yargs-parser'
 
@@ -98,6 +105,53 @@ function getCommonArgs(version: string) {
   return commonArgs
 }
 
+const authFlagInputs = [
+  'client-id',
+  'token-url',
+  'oauth2-username',
+  'login-command',
+  'login-url',
+  'login-data',
+  'login-token-field',
+  'jwt-public-key'
+]
+
+const authSecretInputs: Record<string, string> = {
+  'client-secret': 'VULNAPI_CLIENT_SECRET',
+  'oauth2-password': 'VULNAPI_OAUTH2_PASSWORD'
+}
+
+function getAuthArgs() {
+  const args: string[] = []
+  const env: Record<string, string> = {}
+
+  for (const input of authFlagInputs) {
+    const value = getInput(input)
+    if (value) {
+      if (input === 'login-data') {
+        setSecret(value)
+      }
+      args.push(`--${input}=${value}`)
+    }
+  }
+
+  for (const scope of getInput('oauth2-scopes').split(/\s+/)) {
+    if (scope) {
+      args.push(`--oauth2-scope=${scope}`)
+    }
+  }
+
+  for (const [input, name] of Object.entries(authSecretInputs)) {
+    const value = getInput(input)
+    if (value) {
+      setSecret(value)
+      env[name] = value
+    }
+  }
+
+  return { args, env }
+}
+
 export async function run() {
   try {
     const version = getInput('version')
@@ -125,7 +179,8 @@ export async function run() {
       return
     }
 
-    const commandArgs = ['scan', ...scanArgs, ...commonArgs]
+    const auth = getAuthArgs()
+    const commandArgs = ['scan', ...scanArgs, ...commonArgs, ...auth.args]
     const report = prepareReport(commandArgs)
     if (!isVersionAtLeast(resolvedVersion, '0.11.1')) {
       useFormatForOutputFile(commandArgs)
@@ -134,7 +189,8 @@ export async function run() {
 
     const execOptions: ExecOptions = {
       failOnStdErr: false,
-      ignoreReturnCode: true
+      ignoreReturnCode: true,
+      env: { ...(process.env as Record<string, string>), ...auth.env }
     }
 
     debug(`Running vulnapi with: ${JSON.stringify(commandArgs)}`)
